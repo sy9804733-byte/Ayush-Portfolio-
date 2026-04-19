@@ -1,114 +1,24 @@
 import { useEffect, useRef } from 'react'
 
-interface Particle {
-  x: number
-  y: number
-  vx: number
-  vy: number
-  radius: number
-  alpha: number
-  color: string
-}
-
-const COLORS = ['#3b82f6', '#06b6d4', '#0ea5e9', '#38bdf8', '#7dd3fc']
-
-function createParticle(width: number, height: number): Particle {
-  const angle = Math.random() * Math.PI * 2
-  const speed = 0.2 + Math.random() * 0.5
-  return {
-    x: Math.random() * width,
-    y: Math.random() * height,
-    vx: Math.cos(angle) * speed,
-    vy: Math.sin(angle) * speed,
-    radius: 1 + Math.random() * 2.5,
-    alpha: 0.2 + Math.random() * 0.6,
-    color: COLORS[Math.floor(Math.random() * COLORS.length)],
-  }
-}
-
 export default function AnimatedBackground() {
-  const canvasRef = useRef<HTMLCanvasElement>(null)
+  const containerRef = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
-    const canvas = canvasRef.current
-    if (!canvas) return
-    const ctx = canvas.getContext('2d')
-    if (!ctx) return
+    const container = containerRef.current
+    if (!container) return
 
-    let animId: number
-    let particles: Particle[] = []
-    const CONNECTION_DIST = 130
+    const orbs = container.querySelectorAll('.orb')
+    const baseDelay = 0.5
 
-    function resize() {
-      if (!canvas) return
-      canvas.width = window.innerWidth
-      canvas.height = window.innerHeight
-      particles = Array.from({ length: 120 }, () =>
-        createParticle(canvas.width, canvas.height)
-      )
-    }
-
-    function hexToRgb(hex: string) {
-      const r = parseInt(hex.slice(1, 3), 16)
-      const g = parseInt(hex.slice(3, 5), 16)
-      const b = parseInt(hex.slice(5, 7), 16)
-      return `${r},${g},${b}`
-    }
-
-    function draw() {
-      if (!canvas || !ctx) return
-      ctx.clearRect(0, 0, canvas.width, canvas.height)
-
-      for (let i = 0; i < particles.length; i++) {
-        const p = particles[i]
-
-        p.x += p.vx
-        p.y += p.vy
-
-        if (p.x < 0) p.x = canvas.width
-        if (p.x > canvas.width) p.x = 0
-        if (p.y < 0) p.y = canvas.height
-        if (p.y > canvas.height) p.y = 0
-
-        ctx.beginPath()
-        ctx.arc(p.x, p.y, p.radius, 0, Math.PI * 2)
-        ctx.fillStyle = `rgba(${hexToRgb(p.color)},${p.alpha})`
-        ctx.fill()
-
-        for (let j = i + 1; j < particles.length; j++) {
-          const q = particles[j]
-          const dx = p.x - q.x
-          const dy = p.y - q.y
-          const dist = Math.sqrt(dx * dx + dy * dy)
-
-          if (dist < CONNECTION_DIST) {
-            const opacity = (1 - dist / CONNECTION_DIST) * 0.15
-            ctx.beginPath()
-            ctx.moveTo(p.x, p.y)
-            ctx.lineTo(q.x, q.y)
-            ctx.strokeStyle = `rgba(${hexToRgb(p.color)},${opacity})`
-            ctx.lineWidth = 0.8
-            ctx.stroke()
-          }
-        }
-      }
-
-      animId = requestAnimationFrame(draw)
-    }
-
-    resize()
-    draw()
-
-    window.addEventListener('resize', resize)
-    return () => {
-      cancelAnimationFrame(animId)
-      window.removeEventListener('resize', resize)
-    }
+    orbs.forEach((orb, index) => {
+      const delay = baseDelay + index * 0.2
+      ;(orb as HTMLElement).style.setProperty('--delay', `${delay}s`)
+    })
   }, [])
 
   return (
-    <canvas
-      ref={canvasRef}
+    <div
+      ref={containerRef}
       style={{
         position: 'fixed',
         inset: 0,
@@ -116,7 +26,117 @@ export default function AnimatedBackground() {
         height: '100%',
         zIndex: 0,
         pointerEvents: 'none',
+        overflow: 'hidden',
       }}
-    />
+    >
+      <style>{`
+        @keyframes float {
+          0%, 100% {
+            transform: translate(0, 0) scale(1);
+            opacity: 0.5;
+          }
+          25% {
+            transform: translate(80px, -120px) scale(1.1);
+            opacity: 0.7;
+          }
+          50% {
+            transform: translate(-60px, 80px) scale(0.9);
+            opacity: 0.6;
+          }
+          75% {
+            transform: translate(120px, 100px) scale(1.05);
+            opacity: 0.7;
+          }
+        }
+
+        @keyframes glow {
+          0%, 100% {
+            filter: blur(60px) brightness(0.8);
+          }
+          50% {
+            filter: blur(80px) brightness(1.2);
+          }
+        }
+
+        @keyframes shift {
+          0%, 100% {
+            transform: translate(-300px, -300px);
+          }
+          25% {
+            transform: translate(200px, -250px);
+          }
+          50% {
+            transform: translate(100px, 150px);
+          }
+          75% {
+            transform: translate(-150px, 200px);
+          }
+        }
+
+        .orb {
+          position: absolute;
+          filter: blur(60px);
+          mix-blend-mode: screen;
+          animation: float 20s ease-in-out infinite, glow 4s ease-in-out infinite;
+          animation-delay: var(--delay, 0s);
+        }
+
+        .orb-1 {
+          width: 400px;
+          height: 400px;
+          background: radial-gradient(circle, rgba(59, 130, 246, 0.5) 0%, rgba(59, 130, 246, 0) 70%);
+          top: -100px;
+          left: 10%;
+          animation-duration: 25s, 5s;
+        }
+
+        .orb-2 {
+          width: 350px;
+          height: 350px;
+          background: radial-gradient(circle, rgba(6, 182, 212, 0.4) 0%, rgba(6, 182, 212, 0) 70%);
+          top: 200px;
+          right: 15%;
+          animation-duration: 28s, 6s;
+          animation-delay: 2s, 1s;
+        }
+
+        .orb-3 {
+          width: 380px;
+          height: 380px;
+          background: radial-gradient(circle, rgba(14, 165, 233, 0.3) 0%, rgba(14, 165, 233, 0) 70%);
+          bottom: -50px;
+          left: 20%;
+          animation-duration: 30s, 7s;
+          animation-delay: 4s, 2s;
+        }
+
+        .orb-4 {
+          width: 420px;
+          height: 420px;
+          background: radial-gradient(circle, rgba(56, 189, 248, 0.25) 0%, rgba(56, 189, 248, 0) 70%);
+          bottom: 100px;
+          right: 10%;
+          animation-duration: 27s, 5.5s;
+          animation-delay: 1s, 3s;
+        }
+
+        .orb-5 {
+          width: 300px;
+          height: 300px;
+          background: radial-gradient(circle, rgba(125, 211, 252, 0.2) 0%, rgba(125, 211, 252, 0) 70%);
+          top: 50%;
+          left: 50%;
+          transform: translate(-50%, -50%);
+          animation-duration: 35s, 8s;
+          animation-delay: 5s, 4s;
+        }
+      `}</style>
+
+      <div className="orb orb-1" />
+      <div className="orb orb-2" />
+      <div className="orb orb-3" />
+      <div className="orb orb-4" />
+      <div className="orb orb-5" />
+    </div>
   )
 }
